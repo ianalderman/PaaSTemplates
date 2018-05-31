@@ -1,0 +1,93 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "baseResourceName": {
+        "type": "string",
+        "metadata": {
+          "description": "Name of the resource"
+        },
+        "maxLength": 15,
+        "defaultValue": "[uniqueString(resourceGroup().id)]"
+      },
+      "TagCostCtr": {
+          "type": "string",
+          "metadata": {
+              "description": "The value of the Cost Center for this resource for use in the CostCtr Tag"
+          }
+      },
+      "storageAccountId": {
+          "type": "string",
+          "metadata": {
+              "description": "Resource Id for the storage account to store diagnostics"
+          }
+      },
+      "workspaceId": {
+        "type": "string",
+        "metadata": {
+            "description": "Resource Id for the Log Analytics workspace to store diagnostics"
+        }
+    },
+    "LogsRetentionInDays": {
+        "type": "int",
+        "metadata": {
+            "description": "Number of days to retain logs"
+        }
+    }
+    },
+    "variables": {
+        "tenantId": "[subscription().tenantId]",
+        "vaultName": "[concat('kv',parameters('baseResourceName'))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.KeyVault/vaults",
+            "name": "[variables('vaultName')]",
+            "apiVersion": "2015-06-01",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "CostCtr":"[parameters('TagCostCtr')]"
+            },
+            "properties": {
+                "tenantId": "[variables('tenantId')]",
+                "sku": {
+                    "family": "A",
+                    "name": "Standard"
+                },
+                "accessPolicies": [],
+                "enablePurgeProtection": true,
+                "enableSoftDelete": true
+            }
+            
+        },
+        {  
+            "type":"Microsoft.KeyVault/vaults/providers/diagnosticsettings",
+            "name":"[concat(variables('vaultName'), '/Microsoft.Insights/service')]",
+            "apiVersion":"2016-09-01",
+            "location":"[resourceGroup().location]",
+            "dependsOn":[  
+                "[concat('Microsoft.KeyVault/vaults/', variables('vaultName'))]"
+              ],
+            "properties":{  
+              "storageAccountId":"[parameters('storageAccountId')]",
+              "workspaceId":"[parameters('workspaceId')]",
+              "logs":[  
+                {  
+                  "category":"AuditEvent",
+                  "enabled":true,
+                  "retentionPolicy":{  
+                    "enabled":true,
+                    "days":"[parameters('LogsRetentionInDays')]"
+                  }
+                }
+              ]
+            }
+          }
+    ],
+    "outputs": {
+        "keyVaultId": {
+            "type": "string",
+            "value": "[resourceId('Microsoft.KeyVault/vaults',variables('vaultName'))]"
+        }
+    }
+}

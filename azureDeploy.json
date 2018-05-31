@@ -1,0 +1,89 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "parameters": {
+            "workspaceName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the resource"
+              },
+              "maxLength": 15,
+              "defaultValue": "[uniqueString(resourceGroup().id)]"
+            },
+            "LogsRetentionInDays": {
+              "type": "int",
+              "defaultValue": 7,
+              "metadata": {
+                "description": "Number of days to retain logs"
+              }
+            },
+            "LogsWorkspaceLocation": {
+              "type": "string",
+              "allowedValues": [
+                "eastus",
+                "westeurope",
+                "southeastasia",
+                "australiasoutheast",
+                "westcentralus",
+                "japaneast",
+                "uksouth",
+                "centralindia",
+                "canadacentral"
+              ],
+              "defaultValue": "westeurope",
+              "metadata": {
+                "description": "The Azure region the Logs Workspace will be deployed to"
+              }
+            },
+            "LogAnalyticsSKU": {
+              "type": "string",
+              "defaultValue": "pergb2018",
+              "allowedValues": [
+                "Free",
+                "pergb2018"
+              ],
+              "metadata": {
+                "description": "The pricing tier of the Log Analytics workspace.  New workspaces should be ok 'pergb2018', some subscritpions may require 'Free' please see http://aka.ms/PricingTierWarning"
+              }
+            },
+              "AuditRetentionPeriodInDays": {
+                "type": "int",
+                "defaultValue": 7
+              },
+              "TagCostCtr": {
+                  "type": "string",
+                  "metadata": {
+                      "description": "The value of the Cost Center for this resource for use in the CostCtr Tag"
+                  }
+              }
+          },
+        "logAnalyticsResourceGroup": {
+            "type": "string",
+            "defaultValue": "rg-LogAnalytics",
+            "metadata": {
+                "description": "Name of the resource group to host the Log Analytics workspace"
+            }
+        }
+    },
+    "variables": {
+        "templateBaseUrl": "https://raw.githubusercontent.com/ianalderman/PaaSTemplates/master/",
+        "logAnalyticsTemplateUrl": "[concat(variables('templateBaseUrl'), 'DeployLogAnalytics.json')]"
+    },
+    "resources": [
+        {
+            "apiVersion": "2017-05-10",
+            "name": "deployLogAnalyticsWorkspace",
+            "type": "Microsoft.Resources/deployments",
+            "resourceGroup": "[parameters('logAnalyticsResourceGroup')]",
+            "subscriptionId": "[subscription().id]",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri":"[variables('logAnalyticsTemplateUrl')]",
+                    "contentVersion":"1.0.0.0"
+                 }
+            }
+        }
+    ]
+}
