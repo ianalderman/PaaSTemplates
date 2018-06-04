@@ -11,12 +11,14 @@
       "defaultValue": "[uniqueString(resourceGroup().id)]"
     },
     "databaseName": {
+        "type": "string",
         "defaultValue": "[concat('db-', parameters('baseResourceName'))]",
         "metadata": {
             "description": "Name of the Database to be deployed"
         }
     },
     "databaseServerName": {
+      "type": "string",
         "defaultValue": "[concat('svr-', uniqueString(resourceGroup().id))]",
             "metadata": {
                 "description": "Name of the Database Server to be deployed"
@@ -91,11 +93,15 @@
         }
       },
     "useAADGroupForSQLAdmin": {
-        "type": "bool",
+        "type": "string",
         "metadata": {
           "description": "Should the SQL Database be set to support Azure Active Directory User/Group for Administration.  If set the 'AADAdminObjectID' and 'AADLogin' parameters must be set."
         },
-        "defaultValue": false
+        "allowedValues": [
+          "Yes",
+          "No"
+        ],
+        "defaultValue": "Yes"
     },
     "AADAdminLogin": {
         "type": "string",
@@ -188,11 +194,15 @@
     "metadata": {
         "description": "Resource Id for the Log Analytics workspace to store diagnostics"
     }
-}
   },
+  "workspaceLocation": {
+    "type": "string",
+    "metadata": {
+        "description": "Resource Id for the Log Analytics workspace to store diagnostics"
+      }
+  }
+},
   "variables": {
-    "databaseName": "[concat('asq-', parameters('baseResourceName'))]",
-    "databaseServerName": "[concat('svr', uniqueString(resourceGroup().id))]",
     "AAD TenantID": "[subscription().tenantId]",
     "arrayStorageId": "[split(parameters('storageAccountId'), '/')]",
     "storageAccountName": "[last(variables('arrayStorageId'))]",
@@ -206,56 +216,61 @@
     }
   },
   "resources": [
-       {
-      "name": "[variables('databaseServerName')]",
+    {
+      "name": "[parameters('databaseServerName')]",
       "type": "Microsoft.Sql/servers",
+      "apiVersion": "2015-05-01-preview",
       "location": "[resourceGroup().location]",
-      "apiVersion": "2014-04-01-preview",
+      "tags": {
+        "CostCtr":"[parameters('TagCostCtr')]"
+      },
+      "identity": {
+        "type": "SystemAssigned"
+      },
       "properties": {
         "administratorLogin": "[parameters('sqlServerAdminLogin')]",
         "administratorLoginPassword": "[parameters('sqlServerAdminPassword')]",
         "version": "12.0"
       },
-      "identity": {
-        "type": "SystemAssigned"
-    },
       "resources": [
         {
-          "name": "[variables('databaseName')]",
+          "name": "[parameters('databaseName')]",
           "type": "databases",
           "location": "[resourceGroup().location]",
-          "apiVersion": "2014-04-01-preview",
+          "apiVersion": "2014-04-01",
           "dependsOn": [
-            "[variables('databaseServerName')]"
+            "[parameters('databaseServerName')]"
           ],
+          "tags": {
+            "CostCtr":"[parameters('TagCostCtr')]"
+          },
           "properties": {
             "edition": "[parameters('sqlDatabaseEdition')]",
             "collation": "[parameters('sqlDatabaseCollation')]",
             "maxSizeBytes": "[parameters('sqlDatabaseMaxSizeBytes')]"
           },
           "resources": [
-            {
-
-              "comments": "Transparent Data Encryption",
-              "name": "current",
-              "type": "transparentDataEncryption",
-              "apiVersion": "2014-04-01-preview",
-              "properties": {
-                "status": "[parameters('transparentDataEncryption')]"
-              },
-              "dependsOn": [
-                "[variables('databaseName')]"
-              ]
-            }
-          ]
-        },
+              {
+                "comments": "Transparent Data Encryption",
+                "name": "current",
+                "type": "transparentDataEncryption",
+                "apiVersion": "2014-04-01",
+                "properties": {
+                  "status": "[parameters('transparentDataEncryption')]"
+                },
+                "dependsOn": [
+                  "[parameters('databaseName')]"
+                ]
+              }
+            ]
+          },
         {
           "apiVersion": "2015-05-01-preview",
           "type": "auditingSettings",
           "name": "Default",
           "location": "[resourceGroup().location]",
           "dependsOn": [
-            "[concat('Microsoft.Sql/servers/', variables('databaseServerName'))]"
+            "[concat('Microsoft.Sql/servers/', parameters('databaseServerName'))]"
           ],
           "properties": {
             "State": "Enabled",
@@ -272,8 +287,8 @@
           "type": "securityAlertPolicies",
           "name": "DefaultSecurityPolicies",
           "dependsOn": [
-            "[concat('Microsoft.Sql/servers/', variables('databaseServerName'))]",
-            "[concat('Microsoft.Sql/servers/', variables('databaseServerName'), '/auditingSettings/Default')]"
+            "[concat('Microsoft.Sql/servers/', parameters('databaseServerName'))]",
+            "[concat('Microsoft.Sql/servers/', parameters('databaseServerName'), '/auditingSettings/Default')]"
           ],
           "properties": {
               "state": "Enabled",
@@ -298,14 +313,14 @@
                 "tenantId": "[variables('AAD TenantID')]"
             },
             "dependsOn": [
-                "[concat('Microsoft.Sql/servers/', variables('databaseServerName'))]"
+                "[concat('Microsoft.Sql/servers/', parameters('databaseServerName'))]"
             ]
         },
         {
           "type": "firewallrules",
           "apiVersion": "2014-04-01-preview",
           "dependsOn": [
-            "[variables('databaseServerName')]"
+            "[parameters('databaseServerName')]"
           ],
           "location": "[resourceGroup().location]",
           "name": "AllowAllWindowsAzureIps",
@@ -322,7 +337,7 @@
       "apiVersion": "2016-03-01",      
       "location": "[resourceGroup().location]",
       "dependsOn": [
-        "[variables('databaseName')]"
+        "[parameters('databaseName')]"
       ],
       "properties": {
         "name:": "FirewallBlockedConnections",
@@ -332,7 +347,7 @@
           "odata.type": "Microsoft.Azure.Management.Insights.Models.ThresholdRuleCondition",
           "dataSource": {
             "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleMetricDataSource",
-            "resourceUri": "[resourceId('Microsoft.Sql/servers/databases', variables('databaseServerName'), variables('databaseName'))]",
+            "resourceUri": "[resourceId('Microsoft.Sql/servers/databases', parameters('databaseServerName'), parameters('databaseName'))]",
             "metricName": "blocked_by_firewall"
           },
           "operator": "GreaterThanOrEqual",
@@ -355,7 +370,7 @@
         "type": "Microsoft.Insights/alertRules",
         "name": "FailedDatabaseConnections",
         "dependsOn": [
-          "[variables('databaseName')]"
+          "[parameters('databaseName')]"
         ],
         "location": "[resourceGroup().location]",
         "apiVersion": "2014-04-01",
@@ -367,7 +382,7 @@
             "odata.type": "Microsoft.Azure.Management.Insights.Models.ThresholdRuleCondition",
                 "dataSource": {
                     "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleMetricDataSource",
-                    "resourceUri": "[resourceId('Microsoft.Sql/servers/databases', variables('databaseServerName'), variables('databaseName'))]",
+                    "resourceUri": "[resourceId('Microsoft.Sql/servers/databases', parameters('databaseServerName'), parameters('databaseName'))]",
                     "metricName": "connection_failed"
                 },
                 "operator": "GreaterThan",
@@ -385,13 +400,15 @@
     },
     {
       "type": "Microsoft.Sql/servers/databases/providers/diagnosticSettings",
-      "name": "[concat(variables('databaseServerName'),'/', variables('databaseName'),'/Microsoft.Insights/SQLLogAnalyticsIntegration')]",
+      "name": "[concat(parameters('databaseServerName'),'/', parameters('databaseName'),'/Microsoft.Insights/SQLLogAnalyticsIntegration')]",
       "apiVersion": "2017-05-01-preview",
       "dependsOn": [
-        "[variables('databaseServerName')]",
-        "[variables('databaseName')]"
+        "[parameters('databaseServerName')]",
+        "[parameters('databaseName')]"
       ],
       "properties": {
+        "name": "SQLLogAnalyticsIntegration",
+			  "workspaceId": "[parameters('workspaceId')]",
         "logs": [
         {
           "category": "Errors",
@@ -432,7 +449,7 @@
     },
     {
       "apiVersion": "2015-11-01-preview",
-      "location": "[resourceGroup().location]",
+      "location": "[parameters('workspaceLocation')]",
       "name": "[variables('AzureSQLAnalytics').Name]",
       "type": "Microsoft.OperationsManagement/solutions",
       "id": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.OperationsManagement/solutions/', variables('AzureSQLAnalytics').Name)]",
