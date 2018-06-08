@@ -74,8 +74,11 @@
                 "[concat('hidden-link:', resourceGroup().id, '/providers/Microsoft.Web/sites/', parameters('appName'))]": "Resource",
                 "displayName": "AppInsightsComponent"
             },
+            "dependsOn": [
+                "[concat('Microsoft.Web/sites/', parameters('appName'))]"
+              ],            
             "properties": {
-                "applicationId": "[concat('ai-',parameters('baseResourceName'),'-',parameters('appName'))]"         
+                "applicationId": "[parameters('appName')]"         
             }
         },
         {
