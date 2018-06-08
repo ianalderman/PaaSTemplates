@@ -1,0 +1,130 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "baseResourceName": {
+            "type": "string",
+            "metadata": {
+              "description": "Base name to ensure unique names where required for deployments"
+            },
+            "maxLength": 15,
+            "defaultValue": "[uniqueString(resourceGroup().id)]"
+          },
+        "appServicePlanName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the App Service Plan to deploy"
+            },
+            "defaultValue": "[concat('asp','-',parameters('baseResourceName'))]"    
+        },
+        "appServiceKind": {
+            "type": "string",
+            "allowedValues": [
+                "app",
+                "api"
+            ]
+        },
+        "appName": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the app to deploy"
+            }
+        },
+        "appSlotsToDeploy": {
+            "type": "array",
+            "metadata": {
+                "description": "Array of slots to deploy for apps within the service plan"
+              },
+              "defaultValue": [
+                "Dev",
+                "QA",
+                "UAT",
+                "Preview"
+              ] 
+        },
+        "minTLSVersionSupported": {
+            "type": "string",
+            "metadata": {
+                "description": "The minimum TLS version required for SSL requests"
+            },
+            "allowedValues": [
+                "1.0",
+                "1.1",
+                "1.2"
+            ],
+            "defaultValue": "1.2"
+        },
+        "allowedIPAddresses": {
+            "type": "array",
+            "metadata": {
+                "description": "An array of IP Address restriction objects in the form {'ipAddress':'<IP Address>','subnetMask':'<Subnet Mask>'"
+            }
+        }
+    },
+    "variables": {
+        "templateBaseUrl": "https://raw.githubusercontent.com/ianalderman/PaaSTemplates/master",
+        "appServiceTemplateUrl": "[concat(variables('templateBaseUrl'), 'Microsoft.Web/core/appService.json')]"
+    },
+    "resources": [
+        {
+            "apiVersion": "2017-05-10",
+            "name": "deployAppService",
+            "type": "Microsoft.Resources/deployments",
+            "resourceGroup": "[resourceGroup().name]",
+            "subscriptionId": "[subscription().id]",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri":"[variables('appServiceTemplateUrl')]",
+                    "contentVersion":"1.0.0.0"
+                 },
+                 "parameters": {
+                    "appName": {
+                        "value": "ianswebappj890uijkj"
+                      },
+                      "appServiceKind": {
+                        "value": "app"
+                      },
+                      "allowedIPAddresses": {
+                        "value": [
+                          {
+                            "ipAddress": "13.10.110.7",
+                            "subnetMask": "255.255.255.255"
+                          }
+                        ]
+                      }
+                 }
+            }
+        },
+        {
+            "apiVersion": "2017-05-10",
+            "name": "deployAppService",
+            "type": "Microsoft.Resources/deployments",
+            "resourceGroup": "[resourceGroup().name]",
+            "subscriptionId": "[subscription().id]",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri":"[variables('appServiceTemplateUrl')]",
+                    "contentVersion":"1.0.0.0"
+                 },
+                 "parameters": {
+                    "appName": {
+                        "value": "ianswebappj890uijkaasaj"
+                      },
+                      "appServiceKind": {
+                        "value": "api"
+                      },
+                      "allowedIPAddresses": {
+                        "value": [
+                          {
+                            "ipAddress": "13.10.110.7",
+                            "subnetMask": "255.255.255.255"
+                          }
+                        ]
+                      }
+                 }
+            }
+        }
+    ]
+}
