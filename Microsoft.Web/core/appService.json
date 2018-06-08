@@ -73,10 +73,7 @@
             "tags": {
                 "[concat('hidden-link:', resourceGroup().id, '/providers/Microsoft.Web/sites/', parameters('appName'))]": "Resource",
                 "displayName": "AppInsightsComponent"
-            },
-            "dependsOn": [
-                "[concat('Microsoft.Web/sites/', parameters('appName'))]"
-              ],            
+            },      
             "properties": {
                 "applicationId": "[parameters('appName')]"         
             }
